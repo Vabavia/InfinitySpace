@@ -2,103 +2,59 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MapView : MonoBehaviour
+public class MapView : BaseView
 {
-	public const int SCALE_MIN = 5;
-	public const int SCALE_MAX = 10000;
+	private const int PLANETS_SPRITES_NUM = 100;
+
 
 	private const int SCALE_SPECIAL = 10;
 	private const int SCALE_SPECIAL_SIZE = 9;
-
-	private const int PLANETS_SPRITES_NUM = 100;
-
 	public int planetsInSpecialScale = 20;
-
 	public int lagStartScale = 2000;
+
 
 	public float minPos = -5f;
 	public float maxPos = 5f;
-	
-	public IMapProvider mapProvider;
 
-	private int _spaceShipRating;
-	public int spaceShipRating {
-		set { 
-			_spaceShipRating = value;
-			QueueRedraw ();
-		}
-		get { return _spaceShipRating; }
-	}
+
+	public MapModel mapModel { get; set; }
+
+	public ShipModel shipModel { get; set; }
+
+	public IMapProvider mapProvider { get; set; }
+
 
 	public GameObject spaceShip;
 	public GameObject planetPrefab;
 
-	private int _scale = SCALE_MIN;
-
-	public int scale {
-		set { 
-			_scale = Mathf.Min (SCALE_MAX, Mathf.Max (SCALE_MIN, value));
-			QueueRedraw ();
-		}
-		get { return _scale; }
-	}
-
-	private int _x = 0;
-
-	public int x {
-		set {
-			_x = value;
-			QueueRedraw ();
-		}
-		get { return _x; }
-	}
-
-	private int _y = 0;
-
-	public int y {
-		set {
-			_y = value;
-			QueueRedraw ();
-		}
-		get { return _y; }
-	}
-		
-	private bool redrawQueued = false;
-	private IEnumerator drawSpecialCoroutine;
 
 	private GameObject planetsContainer;
+
+
+	private IEnumerator drawSpecialCoroutine;
 
 	void Start ()
 	{
 		planetsContainer = new GameObject ("PlanetsContainer");
 		planetsContainer.transform.parent = transform;
 
+		mapModel.Changed += QueueRedraw;
+		shipModel.Changed += QueueRedraw;
+
 		QueueRedraw ();
 	}
 
-	void QueueRedraw ()
+	protected override void Redraw ()
 	{
-		if (!redrawQueued) {
-			StartCoroutine (Redraw ());
-		}
-	}
-
-	IEnumerator Redraw ()
-	{
-		redrawQueued = true;
-		yield return null;
-
 		Clear ();
 
-		Debug.LogFormat ("Redraw x={0}, y={1}, scale={2}", _x, _y, _scale);
+		Debug.LogFormat ("Redraw x={0}, y={1}, scale={2}", shipModel.x, shipModel.y, mapModel.scale);
 
-		if (_scale < SCALE_SPECIAL) {
+		if (mapModel.scale < SCALE_SPECIAL) {
 			DrawAllPlanets ();
 		} else {
 			DrawSpecialPlanets ();
 		}
-
-		redrawQueued = false;
 	}
 
 	void Clear ()
@@ -110,10 +66,14 @@ public class MapView : MonoBehaviour
 
 	void DrawAllPlanets ()
 	{
-		float cellSize = (maxPos - minPos) / (float)_scale;
-		float planetScale = (float)SCALE_MIN / (float)_scale;
+		var _x = shipModel.x;
+		var _y = shipModel.y;
+		var _scale = mapModel.scale;
 
-		var planets = mapProvider.LoadPlanetsAtRect (x, y, _scale, _scale);
+		float cellSize = (maxPos - minPos) / (float)_scale;
+		float planetScale = (float)MapModel.SCALE_MIN / (float)mapModel.scale;
+
+		var planets = mapProvider.LoadPlanetsAtRect (_x, _y, _scale, _scale);
 
 		foreach (PlanetData planet in planets) {
 			DrawPlanet (
@@ -124,13 +84,13 @@ public class MapView : MonoBehaviour
 			);
 		}
 
-		DrawSpaceShip (cellSize, planetScale, _scale % 2 == 0);
+		DrawSpaceShip (cellSize, planetScale, mapModel.scale % 2 == 0);
 	}
 
 	void DrawSpecialPlanets ()
 	{
 		float cellSize = (maxPos - minPos) / (float)SCALE_SPECIAL_SIZE;
-		float planetScale = (float)SCALE_MIN / (float)SCALE_SPECIAL_SIZE;
+		float planetScale = (float)MapModel.SCALE_MIN / (float)SCALE_SPECIAL_SIZE;
 
 		if (drawSpecialCoroutine != null) {
 			StopCoroutine (drawSpecialCoroutine);
@@ -144,6 +104,11 @@ public class MapView : MonoBehaviour
 
 	IEnumerator DrawSpecial (float cellSize, float planetScale)
 	{
+		var _spaceShipRating = shipModel.rating;
+		var _x = shipModel.x;
+		var _y = shipModel.y;
+		var _scale = mapModel.scale;
+
 		float cellsPerSector = (float)_scale / (float)SCALE_SPECIAL_SIZE;
 
 		List<PlanetData> planets = new List<PlanetData> ();
@@ -179,7 +144,7 @@ public class MapView : MonoBehaviour
 					int posX = Mathf.RoundToInt (cellsPerSector * i);
 					int posY = Mathf.RoundToInt (cellsPerSector * j);
 					var planet = mapProvider.LoadPlanetNearRatingAtRect (
-						_spaceShipRating,
+						             _spaceShipRating,
 						             _x + posX,
 						             _y + posY,
 						             Mathf.RoundToInt (cellsPerSector * (i + 1)) - posX,

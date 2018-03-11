@@ -5,75 +5,37 @@ using UnityEngine.UI;
 
 public class GameEngine : MonoBehaviour
 {
-
 	[Range (0f, 1.0f)]
 	public float fillPlanets = 0.3f;
 
-	public MapView mapView;
+	public MapModel mapModel;
+	public ShipModel shipModel;
 
-	public Text shipRating;
-	public Text scaleText;
-	public Slider scaleSlider;
-	public Button upButton;
-	public Button downButton;
-	public Button leftButton;
-	public Button rightButton;
+	public MapView mapView;
+	public UIView uiView;
 
 	private MapProvider mapProvider;
 
-	void Start ()
+	public GameController gameController;
+
+	void Awake ()
 	{
+		Debug.Log ("GameEngine Start");
+
 		mapProvider = new MapProvider (fillPlanets);
+		shipModel.rating = Random.Range (0, 10000);
+
 		mapView.mapProvider = mapProvider;
-		mapView.spaceShipRating = Random.Range (0, 10000);
-		shipRating.text = "Ship " + mapView.spaceShipRating.ToString("D5");
+		mapView.mapModel = mapModel;
+		mapView.shipModel = shipModel;
 
-		scaleSlider.onValueChanged.AddListener (delegate {
-			SetScale (scaleSlider.value);
-		});
-		upButton.onClick.AddListener (delegate {
-			mapView.y++;
-		});
-		downButton.onClick.AddListener (delegate {
-			mapView.y--;
-		});
-		leftButton.onClick.AddListener (delegate {
-			mapView.x--;
-		});
-		rightButton.onClick.AddListener (delegate {
-			mapView.x++;
-		});
+		uiView.mapModel = mapModel;
+		uiView.shipModel = shipModel;
 
-		UpdateScaleText ();
-	}
+		gameController.mapView = mapView;
+		gameController.mapModel = mapModel;
+		gameController.shipModel = shipModel;
 
-	public void SetScale (float scaleFloat)
-	{
-//		_scale = SCALE_MIN + Mathf.FloorToInt (scaleFloat * (SCALE_MAX - SCALE_MIN));
-		//Log Slider
-		mapView.scale = MapView.SCALE_MIN - 1 + Mathf.RoundToInt (Mathf.Pow (10, scaleFloat * Mathf.Log10 (MapView.SCALE_MAX - MapView.SCALE_MIN + 1)));
-		Debug.Log ("Scale " + mapView.scale);
-
-		UpdateScaleText ();
-	}
-
-	void UpdateScaleText() {
-		scaleText.text = "Scale " + mapView.scale.ToString ("D5");
-	}
-
-	public void Update ()
-	{
-		if (Input.GetKeyDown (KeyCode.W)) {
-			mapView.y++;
-		}
-		if (Input.GetKeyDown (KeyCode.A)) {
-			mapView.x--;
-		}
-		if (Input.GetKeyDown (KeyCode.S)) {
-			mapView.y--;
-		}
-		if (Input.GetKeyDown (KeyCode.D)) {
-			mapView.x++;
-		}
+		Debug.Log ("GameEngine End");
 	}
 }
